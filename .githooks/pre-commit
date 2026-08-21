@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+#
+# Fängt ab, was sonst erst die Pipeline meldet — nach dem Push, wenn man
+# schon weitergedacht hat.
+set -euo pipefail
+
+if ls *.go >/dev/null 2>&1 || [ -f go.mod ]; then
+  unformatted="$(gofmt -l . 2>/dev/null | grep -v '^vendor/' || true)"
+  if [ -n "$unformatted" ]; then
+    echo "  gofmt fehlt bei:" >&2
+    echo "$unformatted" | sed 's/^/    /' >&2
+    echo "  Beheben: gofmt -w ." >&2
+    exit 1
+  fi
+
+  if ! go vet ./... >/dev/null 2>&1; then
+    echo "  go vet meldet Probleme:" >&2
+    go vet ./... 2>&1 | sed 's/^/    /' >&2
+    exit 1
+  fi
+fi
+
+# Versehentlich eingecheckte Geheimnisse.
+staged="$(git diff --cached --name-only --diff-filter=ACM)"
+for f in $staged; do
+  case "$f" in
+    *.key|*.pem|.env|*/.env|*credential.json) 
+      echo "  $f sieht nach einem Geheimnis aus — nicht einchecken." >&2
+      exit 1 ;;
+  esac
+done
+
+exit 0

@@ -1,0 +1,36 @@
+.steprail {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 18px;
+  counter-reset: step;
+}
+
+.steprail__item {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.steprail__num {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: var(--marigold);
+  border: var(--outline) solid var(--ink);
+  border-radius: 999px;
+  font-size: 19px;
+  box-shadow: var(--hard-sm);
+}
+
+.steprail__body { flex: 1; min-width: 0; }
+.steprail__title { font-size: 21px; margin-bottom: 4px; }
+.steprail__text {
+  margin: 0 0 10px;
+  color: var(--ink-soft);
+  font-size: 15.5px;
+}

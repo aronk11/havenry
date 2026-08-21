@@ -1,0 +1,28 @@
+.hostcloud {
+  transform: translate(calc(var(--drift) * 46px), calc(var(--drift) * -20px))
+             rotate(calc(var(--drift) * 7deg));
+  /* Overshoot on the way out and back — a cloud that stops dead looks like a
+     dropped sprite, not something floating. */
+  transition: transform 0.7s cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+
+.hostcloud__body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.hostcloud__name { font-weight: 500; color: var(--ink); }
+
+.hostcloud__services { display: flex; gap: 6px; }
+
+.hostcloud__dot {
+  border-radius: 5px;
+  border: 2px solid var(--ink);
+  background: var(--coral);
+}
+.hostcloud__dot[data-ok] { background: var(--moss); }

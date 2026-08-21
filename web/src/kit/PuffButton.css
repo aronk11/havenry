@@ -1,0 +1,36 @@
+.puff {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: var(--outline) solid var(--ink);
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 4px 5px 0 var(--ink);
+  transition: box-shadow 0.08s ease, transform 0.08s ease;
+}
+
+/* The travel distance matches the shadow offset exactly. Any other number
+   makes the button look like it slid rather than sank. */
+.puff.is-pressed {
+  box-shadow: 0 0 0 var(--ink);
+  transform: translate(4px, 5px);
+}
+
+.puff--md { padding: 11px 22px; font-size: 16px; }
+.puff--lg { padding: 15px 30px; font-size: 19px; }
+
+.puff--primary { background: var(--marigold); color: var(--ink); }
+.puff--cloud   { background: var(--cloud);    color: var(--ink); }
+.puff--ghost {
+  background: transparent;
+  color: var(--cloud);
+  border-color: var(--cloud);
+  box-shadow: 4px 5px 0 rgba(23, 32, 61, 0.55);
+}
+.puff--ghost.is-pressed { box-shadow: 0 0 0 transparent; }
+
+.puff:disabled { opacity: 0.5; cursor: default; }

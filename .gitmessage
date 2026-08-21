@@ -1,0 +1,26 @@
+# <typ>(<bereich>): <beschreibung>          ← max. 72 Zeichen, klein, kein Punkt
+#
+# <warum diese Änderung — nicht was der Diff ohnehin zeigt>
+#
+# Refs: ADR-XXXX
+# BREAKING CHANGE: <nur bei brechenden Änderungen>
+
+# ── Typen ────────────────────────────────────────────────────────────────
+#   feat      neue Funktion            → Nebenversion
+#   fix       Fehlerbehebung           → Patchversion
+#   docs      nur Dokumentation
+#   refactor  Umbau ohne Verhaltensänderung
+#   perf      Laufzeitverbesserung
+#   test      nur Tests
+#   build     Bauprozess, Abhängigkeiten
+#   ci        Pipeline
+#   chore     Sonstiges ohne Produktionswirkung
+#   style     Formatierung
+#
+# ── Der Rumpf ────────────────────────────────────────────────────────────
+# Der Diff zeigt, WAS sich geändert hat. Der Commit erklärt, WARUM.
+# In sechs Monaten ist das der einzige Ort, an dem die Begründung noch steht.
+#
+# Gut:  "Der Reconnect lief endlos, weil ein abgelehntes Credential als
+#        vorübergehender Fehler behandelt wurde."
+# Schlecht: "IsFatal-Prüfung ergänzt"

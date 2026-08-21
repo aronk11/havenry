@@ -1,0 +1,35 @@
+# Agent — auf jedem Host, den Havenry sehen soll.
+#
+# Das Token wird in der Oberfläche erzeugt ("Host hinzufügen"). Es gilt 15
+# Minuten und wird genau einmal angezeigt (ADR-0015).
+#
+#   ENROLL_TOKEN=<token> \
+#   HAVENRY_SERVER=wss://havenry.fritz.box:8443/agent \
+#   docker compose -f deploy/agent.yaml up -d
+#
+# Auf demselben Host wie die Control Plane genügt:
+#   HAVENRY_SERVER=wss://havenry:8443/agent
+
+services:
+  agent:
+    image: ghcr.io/aronk11/havenry-agent:latest
+    container_name: havenry-agent
+    restart: unless-stopped
+    volumes:
+      # Faktisch Root-Zugriff auf diesen Host. Siehe README.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - havenry-agent:/var/lib/havenry-agent
+    command:
+      - --server=${HAVENRY_SERVER:?Adresse der Control Plane setzen, z. B. wss://havenry.fritz.box:8443/agent}
+      # Nur beim ersten Start nötig. Danach hat der Agent ein dauerhaftes
+      # Credential und ignoriert das Token.
+      - --token=${ENROLL_TOKEN:-}
+      # Havenry erzeugt standardmäßig ein selbstsigniertes Zertifikat
+      # (ADR-0024). Im eigenen Netz vertretbar; über Netzgrenzen hinweg
+      # gehört hier ein Zertifikat hin, dem der Agent traut.
+      - --insecure
+    environment:
+      - TZ=Europe/Berlin
+
+volumes:
+  havenry-agent:

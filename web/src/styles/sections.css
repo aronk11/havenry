@@ -1,0 +1,21 @@
+/* Shared section rhythm.
+   Kept in one file so the vertical spacing between sections is decided once.
+   Splitting it across the section stylesheets is how neighbouring paddings
+   start quietly cancelling each other out. */
+
+.section {
+  padding-top: clamp(56px, 9vw, 96px);
+  padding-bottom: clamp(56px, 9vw, 96px);
+}
+
+.section__title {
+  font-size: clamp(30px, 4.6vw, 44px);
+  margin-bottom: 12px;
+}
+
+.section__lede {
+  color: var(--ink-soft);
+  font-size: 17px;
+  max-width: 560px;
+  margin: 0 0 44px;
+}

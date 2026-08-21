@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Havenry</title>
+<style>
+  :root {
+    --bg: #12141a; --panel: #191c24; --line: #262a35;
+    --fg: #e6e8ee; --dim: #8b93a7;
+    --ok: #4ba36a; --warn: #c9973f; --bad: #c25a5a; --accent: #5b8dd6;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 14px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel);
+    position: sticky; top: 0; z-index: 10;
+  }
+  h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .01em; }
+  h1 span { color: var(--dim); font-weight: 400; }
+  main { padding: 20px; max-width: 1100px; margin: 0 auto; }
+  section { margin-bottom: 28px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
+       color: var(--dim); margin: 0 0 10px; font-weight: 600; }
+  .card { background: var(--panel); border: 1px solid var(--line);
+          border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+  .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .grow { flex: 1; min-width: 0; }
+  .name { font-weight: 600; }
+  .meta { color: var(--dim); font-size: 12.5px; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+  .dot.running { background: var(--ok); }
+  .dot.exited, .dot.created { background: var(--dim); }
+  .dot.restarting, .dot.paused { background: var(--warn); }
+  .dot.dead { background: var(--bad); }
+  .pill { font-size: 11.5px; padding: 2px 8px; border-radius: 999px;
+          border: 1px solid var(--line); color: var(--dim); }
+  .pill.ok { color: var(--ok); border-color: #2c4f3a; }
+  .pill.warn { color: var(--warn); border-color: #5a4826; }
+  .pill.bad { color: var(--bad); border-color: #5a2e2e; }
+  button {
+    background: #232733; color: var(--fg); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 11px; font-size: 12.5px; cursor: pointer;
+    font-family: inherit;
+  }
+  button:hover:not(:disabled) { background: #2c313f; border-color: #38404f; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #0c1220; font-weight: 600; }
+  .container-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+                   padding: 8px 0; border-top: 1px solid var(--line); }
+  .container-row:first-of-type { border-top: none; }
+  .stack-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  #logs { position: fixed; inset: 0; background: rgba(8,10,14,.88); display: none;
+          padding: 40px 20px; z-index: 50; }
+  #logs.open { display: block; }
+  #logs .box { max-width: 1000px; margin: 0 auto; background: var(--panel);
+               border: 1px solid var(--line); border-radius: var(--radius);
+               height: 100%; display: flex; flex-direction: column; }
+  #logs .box header { border-radius: var(--radius) var(--radius) 0 0; position: static; }
+  #logtext { flex: 1; overflow: auto; padding: 12px 16px; margin: 0;
+             white-space: pre-wrap; word-break: break-word;
+             font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #cdd3e0; }
+  .empty { color: var(--dim); padding: 20px; text-align: center; }
+  .banner { border-left: 3px solid var(--warn); padding-left: 12px; }
+  code.token { display: block; background: #0e1016; padding: 10px 12px; border-radius: 6px;
+               margin-top: 8px; word-break: break-all; font-size: 12.5px; }
+</style>
+<style>
+  /* Anmeldung */
+  #login { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+           background: var(--bg); z-index: 100; padding: 20px; }
+  #login.open { display: flex; }
+  #login .box { width: 100%; max-width: 360px; background: var(--panel);
+                border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+  #login h2 { margin: 0 0 4px; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--fg); }
+  label { display: block; font-size: 12px; color: var(--dim); margin: 12px 0 4px; }
+  input, select { width: 100%; background: #0e1016; color: var(--fg); border: 1px solid var(--line);
+                  border-radius: 6px; padding: 8px 10px; font: inherit; font-size: 13px; }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  .err { color: var(--bad); font-size: 12.5px; margin-top: 10px; min-height: 17px; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tabs button { border-radius: 6px; }
+  .tabs button.active { background: var(--accent); border-color: var(--accent);
+                        color: #0c1220; font-weight: 600; }
+  .hostchips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .hostchips label { display: inline-flex; align-items: center; gap: 5px; margin: 0;
+                     border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;
+                     cursor: pointer; color: var(--fg); font-size: 12.5px; }
+  .hostchips input { width: auto; }
+  .field-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .field-row > div { flex: 1; min-width: 140px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--dim); font-weight: 600; font-size: 11.5px;
+       text-transform: uppercase; letter-spacing: .06em; padding: 6px 8px; }
+  td { padding: 7px 8px; border-top: 1px solid var(--line); }
+  .hide { display: none !important; }
+  .drift-row { display: flex; gap: 10px; align-items: baseline; padding: 7px 0;
+               border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .drift-row:first-of-type { border-top: none; }
+  .kind { font-size: 11px; padding: 1px 7px; border-radius: 4px; flex: none;
+          text-transform: uppercase; letter-spacing: .04em; }
+  .kind.changed { background: #4a3a1c; color: #e0b45f; }
+  .kind.missing { background: #4a2020; color: #e08080; }
+  .kind.extra   { background: #1c3a4a; color: #6fb8dd; }
+  .kind.stopped { background: #2a2e38; color: var(--dim); }
+  .cmp { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;
+         font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  .cmp .want { color: var(--ok); }
+  .cmp .got  { color: var(--warn); }
+  .cmp .arrow { color: var(--dim); }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="box">
+    <h2>Havenry</h2>
+    <div class="meta">Anmeldung erforderlich</div>
+    <label for="lu">Benutzername</label>
+    <input id="lu" autocomplete="username" autofocus>
+    <label for="lp">Passwort</label>
+    <input id="lp" type="password" autocomplete="current-password">
+    <div class="err" id="lerr"></div>
+    <button class="primary" id="lbtn" style="width:100%; margin-top:12px; padding:9px">Anmelden</button>
+  </div>
+</div>
+
+<div id="pwchange" class="hide">
+  <div id="login" class="open" style="z-index:101">
+    <div class="box">
+      <h2>Passwort ändern</h2>
+      <div class="meta">Das erzeugte Startpasswort muss ersetzt werden.</div>
+      <label for="pwold">Aktuelles Passwort</label>
+      <input id="pwold" type="password" autocomplete="current-password">
+      <label for="pwnew">Neues Passwort (mind. 12 Zeichen)</label>
+      <input id="pwnew" type="password" autocomplete="new-password">
+      <div class="err" id="pwerr"></div>
+      <button class="primary" id="pwbtn" style="width:100%; margin-top:12px; padding:9px">Ändern</button>
+    </div>
+  </div>
+</div>
+
+<header id="app" class="hide">
+  <h1>Havenry <span id="version"></span></h1>
+  <div class="grow"></div>
+  <span class="meta" id="lastupdate"></span>
+  <span class="pill" id="whoami"></span>
+  <!-- AGPL §13: Zugang zum Quelltext für Netznutzer. -->
+  <a href="/source" target="_blank" rel="noopener" class="pill"
+     style="text-decoration:none" title="Quelltext (AGPL-3.0)">Quelltext</a>
+  <button id="btn-logout">Abmelden</button>
+</header>
+
+<main id="appmain" class="hide">
+  <div class="tabs">
+    <button data-tab="uebersicht" class="active">Übersicht</button>
+    <button data-tab="drift">Abweichungen <span id="driftbadge" class="pill hide"></span></button>
+    <button data-tab="repo">Repository</button>
+    <button data-tab="nutzer" id="tab-nutzer">Nutzer</button>
+    <button data-tab="konto">Mein Konto</button>
+  </div>
+
+  <div data-panel="uebersicht">
+    <section id="token-area" hidden></section>
+    <section>
+      <h2>Hosts <button id="btn-token" style="margin-left:8px">Host hinzufügen</button></h2>
+      <div id="hosts"><div class="empty">wird geladen …</div></div>
+    </section>
+    <section>
+      <h2>Stacks</h2>
+      <div id="stacks"><div class="empty">wird geladen …</div></div>
+    </section>
+    <section>
+      <h2>Ereignisse</h2>
+      <div class="card" id="events"><div class="meta">wird geladen …</div></div>
+    </section>
+  </div>
+
+  <div data-panel="drift" class="hide">
+    <section>
+      <h2>Soll aus Git gegen Ist auf den Hosts</h2>
+      <div class="card">
+        <div class="meta">
+          Abweichungen werden angezeigt, nicht automatisch angeglichen.
+          Der Modus <span class="mono">observe</span> ist die Vorgabe — was du von Hand
+          änderst, bleibt bestehen, wird aber sichtbar.
+        </div>
+      </div>
+      <div id="driftlist"><div class="empty">wird geladen …</div></div>
+    </section>
+  </div>
+
+  <div data-panel="repo" class="hide">
+    <section>
+      <h2>Git-Repository</h2>
+      <div class="card" id="repo-status"><div class="meta">wird geladen …</div></div>
+      <div class="card" id="repo-form"></div>
+    </section>
+    <section>
+      <h2>Soll-Zustand aus Git</h2>
+      <div id="desired"><div class="empty">kein Repository verbunden</div></div>
+    </section>
+  </div>
+
+  <div data-panel="nutzer" class="hide">
+    <section>
+      <h2>Nutzer</h2>
+      <div class="card"><div id="users"></div></div>
+    </section>
+    <section>
+      <h2>Neuen Nutzer anlegen</h2>
+      <div class="card">
+        <div class="field-row">
+          <div><label for="nu">Benutzername</label><input id="nu"></div>
+          <div><label for="np">Passwort (mind. 12 Zeichen)</label><input id="np" type="password"></div>
+          <div><label for="nr">Rolle</label>
+            <select id="nr">
+              <option value="viewer">viewer — nur lesen</option>
+              <option value="operator">operator — Container steuern</option>
+              <option value="admin">admin — alles</option>
+            </select>
+          </div>
+        </div>
+        <label>Zugriff auf Hosts <span class="meta">(nichts ausgewählt = alle Hosts)</span></label>
+        <div class="hostchips" id="nhosts"></div>
+        <div class="err" id="nerr"></div>
+        <button class="primary" id="nbtn" style="margin-top:12px">Anlegen</button>
+      </div>
+    </section>
+  </div>
+
+  <div data-panel="konto" class="hide">
+    <section>
+      <h2>Passwort ändern</h2>
+      <div class="card">
+        <div class="field-row">
+          <div><label for="cpo">Aktuelles Passwort</label><input id="cpo" type="password"></div>
+          <div><label for="cpn">Neues Passwort</label><input id="cpn" type="password"></div>
+        </div>
+        <div class="err" id="cperr"></div>
+        <button class="primary" id="cpbtn" style="margin-top:12px">Ändern</button>
+      </div>
+    </section>
+    <section>
+      <h2>API-Token</h2>
+      <div class="card">
+        <div class="meta" style="margin-bottom:10px">
+          Ein Token hat genau die Rechte des eigenen Kontos — nie mehr.
+        </div>
+        <div id="tokens"></div>
+        <div class="field-row" style="margin-top:12px">
+          <div><label for="tn">Name</label><input id="tn" placeholder="z. B. nächtliches Backup"></div>
+          <div><label for="te">Gültigkeit</label>
+            <select id="te">
+              <option value="">unbegrenzt</option>
+              <option value="720h">30 Tage</option>
+              <option value="2160h">90 Tage</option>
+              <option value="8760h">1 Jahr</option>
+            </select>
+          </div>
+        </div>
+        <button id="tbtn" style="margin-top:12px">Token erstellen</button>
+        <div id="tokenout"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="logs">
+  <div class="box">
+    <header>
+      <h1 id="logtitle">Logs</h1>
+      <div class="grow"></div>
+      <button id="logclose">Schließen</button>
+    </header>
+    <pre id="logtext"></pre>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+let logSource = null;
+let me = null;
+let knownHosts = [];
+let timer = null;
+
+async function api(path, opts) {
+  const res = await fetch("/api/v1" + path, {
+    ...opts,
+    headers: { "Content-Type": "application/json", ...(opts && opts.headers) },
+  });
+  // 401 heisst immer: zurueck zur Anmeldung. Das kann jederzeit passieren,
+  // etwa wenn ein Admin die Rolle aendert - dann werden Sitzungen beendet.
+  if (res.status === 401) { showLogin(); throw new Error("nicht angemeldet"); }
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || res.statusText);
+  return body;
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function ago(ts) {
+  if (!ts) return "nie";
+  const secs = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if (secs < 0 || !isFinite(secs)) return "-";
+  if (secs < 60) return secs + " s";
+  if (secs < 3600) return Math.floor(secs / 60) + " min";
+  if (secs < 86400) return Math.floor(secs / 3600) + " h";
+  return Math.floor(secs / 86400) + " d";
+}
+
+function can(p) { return me && me.permissions.includes(p); }
+
+function showLogin() {
+  if (timer) { clearInterval(timer); timer = null; }
+  me = null;
+  $("#login").classList.add("open");
+  $("#app").classList.add("hide");
+  $("#appmain").classList.add("hide");
+  $("#pwchange").classList.add("hide");
+}
+
+async function showApp() {
+  $("#login").classList.remove("open");
+  $("#app").classList.remove("hide");
+  $("#appmain").classList.remove("hide");
+  if (me.user.must_change_password) {
+    $("#pwchange").classList.remove("hide");
+  }
+  $("#whoami").textContent = me.user.username + " · " + me.user.role;
+  // Knoepfe ausblenden ist Bequemlichkeit, keine Sicherheit - verbindlich
+  // prueft der Server (ADR-0022).
+  $("#tab-nutzer").classList.toggle("hide", !can("users.manage"));
+  $("#btn-token").classList.toggle("hide", !can("hosts.approve"));
+  await refresh();
+  if (!timer) timer = setInterval(refresh, 5000);
+}
+
+$("#lbtn").onclick = async () => {
+  $("#lerr").textContent = "";
+  try {
+    await api("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username: $("#lu").value, password: $("#lp").value }),
+    });
+    $("#lp").value = "";
+    me = await api("/auth/me");
+    await showApp();
+  } catch (e) { $("#lerr").textContent = e.message; }
+};
+$("#lp").onkeydown = (e) => { if (e.key === "Enter") $("#lbtn").click(); };
+
+$("#pwbtn").onclick = async () => {
+  $("#pwerr").textContent = "";
+  try {
+    await api("/auth/password", {
+      method: "POST",
+      body: JSON.stringify({ current: $("#pwold").value, new: $("#pwnew").value }),
+    });
+    $("#pwchange").classList.add("hide");
+    me = await api("/auth/me");
+  } catch (e) { $("#pwerr").textContent = e.message; }
+};
+
+$("#btn-logout").onclick = async () => {
+  try { await api("/auth/logout", { method: "POST" }); } catch (e) {}
+  showLogin();
+};
+
+$$(".tabs button").forEach((b) => {
+  b.onclick = () => {
+    $$(".tabs button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active");
+    $$("[data-panel]").forEach((p) =>
+      p.classList.toggle("hide", p.dataset.panel !== b.dataset.tab));
+    if (b.dataset.tab === "nutzer") loadUsers();
+    if (b.dataset.tab === "repo") loadRepo();
+    if (b.dataset.tab === "konto") loadTokens();
+  };
+});
+
+function renderHosts(hosts) {
+  knownHosts = hosts;
+  const el = $("#hosts");
+  if (!hosts.length) {
+    el.innerHTML = `<div class="card"><div class="empty">Kein Host sichtbar.</div></div>`;
+    return;
+  }
+  el.innerHTML = hosts.map((h) => {
+    const needs = !h.approved;
+    return `
+    <div class="card ${needs ? "banner" : ""}">
+      <div class="row">
+        <span class="dot ${h.connected ? "running" : "exited"}"></span>
+        <span class="name">${esc(h.hostname)}</span>
+        <span class="pill ${h.connected ? "ok" : ""}">${h.connected ? "verbunden" : "getrennt"}</span>
+        ${needs ? '<span class="pill warn">nicht bestätigt</span>' : ""}
+        <div class="grow"></div>
+        <span class="meta mono">${esc(h.os)}/${esc(h.arch)} · ${esc(h.agent_version)}</span>
+        ${needs && can("hosts.approve")
+          ? `<button class="primary" data-approve="${esc(h.id)}">Bestätigen</button>` : ""}
+      </div>
+      <div class="meta" style="margin-top:6px">
+        ${h.containers} Container · zuletzt gesehen vor ${ago(h.last_seen)}
+      </div>
+    </div>`;
+  }).join("");
+
+  el.querySelectorAll("[data-approve]").forEach((b) => {
+    b.onclick = async () => {
+      b.disabled = true;
+      try { await api(`/hosts/${b.dataset.approve}/approve`, { method: "POST" }); await refresh(); }
+      catch (e) { alert(e.message); b.disabled = false; }
+    };
+  });
+}
+
+function renderStacks(stacks) {
+  const el = $("#stacks");
+  if (!stacks.length) {
+    el.innerHTML = `<div class="card"><div class="empty">Keine Container gemeldet.</div></div>`;
+    return;
+  }
+  const control = can("containers.control");
+  const logs = can("containers.logs");
+  el.innerHTML = stacks.map((s) => `
+    <div class="card">
+      <div class="stack-head">
+        <span class="name">${esc(s.name)}</span>
+        <span class="meta">auf ${esc(s.host_name)}</span>
+        <div class="grow"></div>
+        <span class="pill ${s.running === s.total ? "ok" : "warn"}">${s.running}/${s.total} laufend</span>
+      </div>
+      ${s.containers.map((c) => `
+        <div class="container-row">
+          <span class="dot ${esc(c.state)}"></span>
+          <span class="mono">${esc(c.service || c.name)}</span>
+          <span class="meta mono">${esc(c.image || "")}</span>
+          ${c.health ? `<span class="pill ${c.health === "healthy" ? "ok" : "warn"}">${esc(c.health)}</span>` : ""}
+          ${c.restarts > 3 ? `<span class="pill bad">${c.restarts}× neu gestartet</span>` : ""}
+          ${(c.ports || []).map((p) => `<span class="pill">:${p.host}→${p.container}</span>`).join("")}
+          <div class="grow"></div>
+          ${logs ? `<button data-log="${esc(c.host_id)}|${esc(c.id)}|${esc(c.name)}">Logs</button>` : ""}
+          ${control ? (c.state === "running"
+            ? `<button data-act="stop" data-host="${esc(c.host_id)}" data-id="${esc(c.id)}">Stop</button>
+               <button data-act="restart" data-host="${esc(c.host_id)}" data-id="${esc(c.id)}">Neustart</button>`
+            : `<button data-act="start" data-host="${esc(c.host_id)}" data-id="${esc(c.id)}">Start</button>`) : ""}
+        </div>`).join("")}
+    </div>`).join("");
+
+  el.querySelectorAll("[data-act]").forEach((b) => {
+    b.onclick = async () => {
+      const orig = b.textContent;
+      b.disabled = true; b.textContent = "…";
+      try {
+        const res = await api(`/containers/${b.dataset.host}/${b.dataset.id}/${b.dataset.act}`,
+          { method: "POST" });
+        if (res.status === "skipped") b.textContent = "war schon so";
+        setTimeout(refresh, 400);
+      } catch (e) { alert(e.message); }
+      finally { setTimeout(() => { b.disabled = false; b.textContent = orig; }, 900); }
+    };
+  });
+  el.querySelectorAll("[data-log]").forEach((b) => {
+    b.onclick = () => { const [h, i, n] = b.dataset.log.split("|"); openLogs(h, i, n); };
+  });
+}
+
+function renderEvents(events) {
+  const el = $("#events");
+  if (!events.length) { el.innerHTML = `<div class="meta">Noch keine Ereignisse.</div>`; return; }
+  el.innerHTML = events.slice().reverse().slice(0, 15).map((e) => `
+    <div class="row" style="padding:3px 0">
+      <span class="meta mono" style="min-width:56px">${ago(e.at)}</span>
+      <span class="meta mono" style="min-width:170px">${esc(e.kind)}</span>
+      <span class="grow">${esc(e.summary)}</span>
+      <span class="pill">${esc(e.actor)}</span>
+    </div>`).join("");
+}
+
+async function loadUsers() {
+  if (!can("users.manage")) return;
+  try {
+    const { users } = await api("/users");
+    $("#users").innerHTML = `
+      <table>
+        <tr><th>Nutzer</th><th>Rolle</th><th>Hosts</th><th>Letzte Anmeldung</th><th></th></tr>
+        ${users.map((u) => `
+          <tr>
+            <td class="mono">${esc(u.username)}${u.id === me.user.id ? ' <span class="pill">du</span>' : ""}</td>
+            <td><span class="pill ${u.role === "admin" ? "warn" : ""}">${esc(u.role)}</span></td>
+            <td class="meta">${u.host_ids.length ? u.host_ids.map(hostName).join(", ") : "alle"}</td>
+            <td class="meta">${u.last_login ? "vor " + ago(u.last_login) : "nie"}</td>
+            <td style="text-align:right">
+              ${u.id !== me.user.id ? `<button data-del="${esc(u.id)}" data-name="${esc(u.username)}">Löschen</button>` : ""}
+            </td>
+          </tr>`).join("")}
+      </table>`;
+    $("#users").querySelectorAll("[data-del]").forEach((b) => {
+      b.onclick = async () => {
+        if (!confirm(`Nutzer „${b.dataset.name}" wirklich löschen? Alle Sitzungen und Token werden ungültig.`)) return;
+        try { await api(`/users/${b.dataset.del}`, { method: "DELETE" }); loadUsers(); }
+        catch (e) { alert(e.message); }
+      };
+    });
+    renderHostChips();
+  } catch (e) {}
+}
+
+function hostName(id) {
+  const h = knownHosts.find((x) => x.id === id);
+  return h ? h.hostname : id;
+}
+
+function renderHostChips() {
+  $("#nhosts").innerHTML = knownHosts.length
+    ? knownHosts.map((h) => `
+        <label><input type="checkbox" value="${esc(h.id)}"> ${esc(h.hostname)}</label>`).join("")
+    : `<span class="meta">noch keine Hosts vorhanden</span>`;
+}
+
+$("#nbtn").onclick = async () => {
+  $("#nerr").textContent = "";
+  const hostIDs = Array.from($("#nhosts").querySelectorAll("input:checked")).map((i) => i.value);
+  try {
+    await api("/users", {
+      method: "POST",
+      body: JSON.stringify({
+        username: $("#nu").value, password: $("#np").value,
+        role: $("#nr").value, host_ids: hostIDs,
+      }),
+    });
+    $("#nu").value = ""; $("#np").value = "";
+    $("#nhosts").querySelectorAll("input:checked").forEach((i) => { i.checked = false; });
+    loadUsers();
+  } catch (e) { $("#nerr").textContent = e.message; }
+};
+
+$("#cpbtn").onclick = async () => {
+  $("#cperr").textContent = "";
+  try {
+    await api("/auth/password", {
+      method: "POST",
+      body: JSON.stringify({ current: $("#cpo").value, new: $("#cpn").value }),
+    });
+    $("#cpo").value = ""; $("#cpn").value = "";
+    $("#cperr").style.color = "var(--ok)";
+    $("#cperr").textContent = "Passwort geändert.";
+  } catch (e) { $("#cperr").style.color = ""; $("#cperr").textContent = e.message; }
+};
+
+async function loadTokens() {
+  try {
+    const { tokens } = await api("/auth/tokens");
+    $("#tokens").innerHTML = tokens.length
+      ? `<table>
+          <tr><th>Name</th><th>Erstellt</th><th>Zuletzt genutzt</th><th>Gültig bis</th><th></th></tr>
+          ${tokens.map((t) => `
+            <tr>
+              <td>${esc(t.name)}</td>
+              <td class="meta">vor ${ago(t.created_at)}</td>
+              <td class="meta">${t.last_used ? "vor " + ago(t.last_used) : "nie"}</td>
+              <td class="meta">${t.expires_at ? new Date(t.expires_at).toLocaleDateString("de-DE") : "unbegrenzt"}</td>
+              <td style="text-align:right"><button data-tdel="${esc(t.id)}">Widerrufen</button></td>
+            </tr>`).join("")}
+        </table>`
+      : `<div class="meta">Noch keine Token.</div>`;
+    $("#tokens").querySelectorAll("[data-tdel]").forEach((b) => {
+      b.onclick = async () => {
+        try { await api(`/auth/tokens/${b.dataset.tdel}`, { method: "DELETE" }); loadTokens(); }
+        catch (e) { alert(e.message); }
+      };
+    });
+  } catch (e) {}
+}
+
+$("#tbtn").onclick = async () => {
+  try {
+    const res = await api("/auth/tokens", {
+      method: "POST",
+      body: JSON.stringify({ name: $("#tn").value, expire_in: $("#te").value }),
+    });
+    $("#tn").value = "";
+    $("#tokenout").innerHTML = `
+      <div class="card banner" style="margin-top:12px">
+        <div class="name">Token erstellt</div>
+        <div class="meta" style="margin:6px 0">Wird nur einmal angezeigt.</div>
+        <code class="token">${esc(res.token)}</code>
+        <div class="meta" style="margin-top:8px">Verwendung: <code>Authorization: Bearer &lt;token&gt;</code></div>
+      </div>`;
+    loadTokens();
+  } catch (e) { alert(e.message); }
+};
+
+async function loadRepo() {
+  try {
+    const r = await api("/repo");
+    const editable = can("repo.manage");
+
+    if (!r.configured) {
+      $("#repo-status").innerHTML = `<div class="meta">Kein Repository verbunden.</div>`;
+      $("#desired").innerHTML = `<div class="card"><div class="empty">kein Repository verbunden</div></div>`;
+    } else {
+      $("#repo-status").innerHTML = `
+        <div class="row">
+          <span class="dot ${r.last_error ? "dead" : "running"}"></span>
+          <span class="mono">${esc(r.url)}</span>
+          <span class="pill">${esc(r.branch)}</span>
+          ${r.base_path ? `<span class="pill">${esc(r.base_path)}</span>` : ""}
+          <div class="grow"></div>
+          ${editable ? `<button id="rsync">Jetzt synchronisieren</button>` : ""}
+        </div>
+        <div class="meta" style="margin-top:8px">
+          ${r.last_sync ? `zuletzt vor ${ago(r.last_sync)}` : "noch nie"} ·
+          Commit <span class="mono">${esc(r.last_commit || "-")}</span>
+          ${r.last_subject ? "· " + esc(r.last_subject) : ""}
+        </div>
+        ${r.last_error ? `<div class="err">${esc(r.last_error)}</div>` : ""}`;
+      if (editable) $("#rsync").onclick = async (e) => {
+        e.target.disabled = true; e.target.textContent = "…";
+        try { await api("/repo/sync", { method: "POST" }); } catch (err) { alert(err.message); }
+        loadRepo();
+      };
+
+      const stacks = r.desired_stacks || [];
+      const probs = r.problems || [];
+      $("#desired").innerHTML = `
+        ${probs.length ? `<div class="card banner">
+          <div class="name">${probs.length} Problem(e) im Repository</div>
+          ${probs.map((p) => `<div class="meta mono" style="margin-top:4px">${esc(p.path)}: ${esc(p.message)}</div>`).join("")}
+        </div>` : ""}
+        ${stacks.length ? stacks.map((s) => `
+          <div class="card">
+            <div class="row">
+              <span class="name">${esc(s.name)}</span>
+              <span class="meta">→ ${s.hosts.map(esc).join(", ")}</span>
+              <span class="pill ${s.mode === "apply" ? "warn" : ""}">${esc(s.mode)}</span>
+              <span class="pill">updates: ${esc(s.updates)}</span>
+              <div class="grow"></div>
+              <span class="meta mono">${esc(s.compose_path)}</span>
+            </div>
+            ${s.env_example && s.env_example.length ? `<div class="meta" style="margin-top:6px">
+              erwartet Variablen: <span class="mono">${s.env_example.map(esc).join(", ")}</span></div>` : ""}
+          </div>`).join("") : `<div class="card"><div class="empty">keine Stacks erkannt</div></div>`}`;
+    }
+
+    $("#repo-form").innerHTML = editable ? `
+      <div class="name" style="margin-bottom:8px">${r.configured ? "Ändern" : "Repository verbinden"}</div>
+      <div class="field-row">
+        <div><label for="ru">Repository-URL</label>
+          <input id="ru" value="${esc(r.url || "")}" placeholder="git@github.com:nutzer/homelab.git"></div>
+        <div><label for="rb">Branch</label><input id="rb" value="${esc(r.branch || "main")}"></div>
+      </div>
+      <div class="field-row" style="margin-top:8px">
+        <div><label for="rp">Unterverzeichnis (optional)</label>
+          <input id="rp" value="${esc(r.base_path || "")}" placeholder="z. B. infra/homelab"></div>
+        <div><label for="rk">Pfad zum SSH-Deploy-Key (optional)</label>
+          <input id="rk" value="${esc(r.ssh_key_path || "")}" placeholder="/var/lib/homelab/deploy_key"></div>
+      </div>
+      <div class="meta" style="margin-top:8px">
+        Erwartete Struktur: <span class="mono">stacks/&lt;host&gt;/&lt;stack&gt;/compose.yaml</span>
+      </div>
+      <div class="err" id="rerr"></div>
+      <button class="primary" id="rsave" style="margin-top:12px">Speichern und synchronisieren</button>`
+      : `<div class="meta">Nur ein Admin kann das Repository ändern.</div>`;
+
+    if (editable) $("#rsave").onclick = async () => {
+      $("#rerr").textContent = "";
+      const btn = $("#rsave"); btn.disabled = true; btn.textContent = "…";
+      try {
+        const res = await api("/repo", {
+          method: "PUT",
+          body: JSON.stringify({
+            url: $("#ru").value, branch: $("#rb").value,
+            base_path: $("#rp").value, ssh_key_path: $("#rk").value,
+          }),
+        });
+        if (res.error) $("#rerr").textContent = res.error;
+      } catch (e) { $("#rerr").textContent = e.message; }
+      finally { btn.disabled = false; btn.textContent = "Speichern und synchronisieren"; loadRepo(); }
+    };
+  } catch (e) {}
+}
+
+function renderDrift(items, hinweis) {
+  const el = $("#driftlist");
+  if (!items.length) {
+    el.innerHTML = `<div class="card"><div class="empty">${esc(hinweis || "keine Stacks zum Vergleichen")}</div></div>`;
+    $("#driftbadge").classList.add("hide");
+    return;
+  }
+
+  const abweichend = items.filter((d) => !d.in_sync && !d.error).length;
+  const badge = $("#driftbadge");
+  badge.classList.toggle("hide", abweichend === 0);
+  badge.classList.toggle("warn", abweichend > 0);
+  badge.textContent = abweichend;
+
+  el.innerHTML = items.map((d) => {
+    // "Konnte nicht pruefen" ist NICHT dasselbe wie "alles in Ordnung".
+    // Beides gleich darzustellen waere die gefaehrlichste Vereinfachung.
+    if (d.error) {
+      return `<div class="card">
+        <div class="stack-head">
+          <span class="name">${esc(d.stack)}</span>
+          <span class="meta">auf ${esc(d.host_name)}</span>
+          <div class="grow"></div>
+          <span class="pill">nicht prüfbar</span>
+        </div>
+        <div class="meta">${esc(d.error)}</div>
+      </div>`;
+    }
+    if (d.in_sync) {
+      return `<div class="card">
+        <div class="stack-head">
+          <span class="dot running"></span>
+          <span class="name">${esc(d.stack)}</span>
+          <span class="meta">auf ${esc(d.host_name)}</span>
+          <div class="grow"></div>
+          <span class="pill">${esc(d.mode)}</span>
+          <span class="pill ok">stimmt mit Git überein</span>
+        </div>
+        ${(d.warnings || []).map((w) => `<div class="meta">Hinweis: ${esc(w)}</div>`).join("")}
+      </div>`;
+    }
+    const darfAufloesen = can("drift.resolve");
+    return `<div class="card banner">
+      <div class="stack-head">
+        <span class="name">${esc(d.stack)}</span>
+        <span class="meta">auf ${esc(d.host_name)}</span>
+        <div class="grow"></div>
+        <span class="pill">${esc(d.mode)}</span>
+        <span class="pill warn">${d.drifts.length} Abweichung(en)</span>
+        ${darfAufloesen && d.can_revert
+          ? `<button data-revert="${esc(d.host_id)}|${esc(d.stack)}">Auf Git-Stand bringen</button>`
+          : darfAufloesen
+            ? `<span class="pill" title="docker compose fehlt auf diesem Host">revert nicht möglich</span>`
+            : ""}
+      </div>
+      ${d.drifts.map((x) => `
+        <div class="drift-row">
+          <span class="kind ${esc(x.kind)}">${esc(kindLabel(x.kind))}</span>
+          <span class="grow">${esc(x.summary)}</span>
+          ${x.desired || x.actual ? `<span class="cmp">
+            <span class="want">${esc(x.desired || "-")}</span>
+            <span class="arrow">→</span>
+            <span class="got">${esc(x.actual || "-")}</span>
+          </span>` : ""}
+          ${darfAufloesen && x.field === "image" && d.can_adopt
+            ? `<button data-adopt="${esc(d.host_id)}|${esc(d.stack)}|${esc(x.service)}">Ins Repo übernehmen</button>`
+            : ""}
+        </div>`).join("")}
+      ${(d.warnings || []).map((w) => `<div class="meta" style="margin-top:6px">Hinweis: ${esc(w)}</div>`).join("")}
+      ${darfAufloesen && !d.can_adopt ? `<div class="meta" style="margin-top:8px">
+        Übernehmen ins Repo ist nicht möglich — kein Schreibzugriff auf das Repository.
+      </div>` : ""}
+      ${d.drifts.some((x) => x.field && x.field !== "image") ? `<div class="meta" style="margin-top:6px">
+        Andere Abweichungen als geänderte Images müssen von Hand ins Repo eingetragen werden
+        (bewusst so — siehe ADR-0028).
+      </div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+function bindDriftActions() {
+  $$("[data-revert]").forEach((b) => {
+    b.onclick = async () => {
+      const [host, stack] = b.dataset.revert.split("|");
+      if (!confirm(`Stack „${stack}" auf den Stand des Repos bringen?\n\n` +
+                   `Änderungen, die nur auf dem Host existieren, gehen dabei verloren.`)) return;
+      const orig = b.textContent;
+      b.disabled = true; b.textContent = "läuft … (kann dauern)";
+      try {
+        const res = await api(`/drift/${host}/${stack}/revert`, { method: "POST" });
+        if (res.output) showOutput(`revert · ${stack}`, res.output);
+        setTimeout(refresh, 600);
+      } catch (e) { alert("Fehlgeschlagen: " + e.message); }
+      finally { b.disabled = false; b.textContent = orig; }
+    };
+  });
+
+  $$("[data-adopt]").forEach((b) => {
+    b.onclick = async () => {
+      const [host, stack, service] = b.dataset.adopt.split("|");
+      if (!confirm(`Das auf dem Host laufende Image von „${service}" ins Repo übernehmen?\n\n` +
+                   `Es wird ein Commit erstellt und gepusht.`)) return;
+      b.disabled = true;
+      try {
+        const res = await api(`/drift/${host}/${stack}/adopt`, {
+          method: "POST",
+          body: JSON.stringify({ service, field: "image" }),
+        });
+        alert(`Übernommen: ${res.image}\nCommit ${res.commit}`);
+        setTimeout(refresh, 600);
+      } catch (e) { alert("Fehlgeschlagen: " + e.message); b.disabled = false; }
+    };
+  });
+}
+
+// showOutput zeigt die vollstaendige Ausgabe von docker compose.
+// Sie wird unveraendert durchgereicht, damit der Nutzer dasselbe sieht wie auf
+// der Kommandozeile (ADR-0027).
+function showOutput(titel, text) {
+  $("#logtitle").textContent = titel;
+  $("#logtext").textContent = text;
+  $("#logs").classList.add("open");
+  if (logSource) { logSource.close(); logSource = null; }
+}
+
+function kindLabel(k) {
+  return { changed: "geändert", missing: "fehlt", extra: "zusätzlich", stopped: "gestoppt" }[k] || k;
+}
+
+function openLogs(hostID, id, name) {
+  $("#logtitle").textContent = "Logs · " + name;
+  $("#logtext").textContent = "";
+  $("#logs").classList.add("open");
+  if (logSource) logSource.close();
+  logSource = new EventSource(`/api/v1/containers/${hostID}/${id}/logs?tail=200`);
+  logSource.onmessage = (ev) => {
+    const box = $("#logtext");
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+    box.textContent += JSON.parse(ev.data);
+    if (atBottom) box.scrollTop = box.scrollHeight;
+  };
+  logSource.addEventListener("eof", () => logSource.close());
+  logSource.onerror = () => { $("#logtext").textContent += "\n[Log-Stream beendet]\n"; };
+}
+
+$("#logclose").onclick = () => {
+  $("#logs").classList.remove("open");
+  if (logSource) { logSource.close(); logSource = null; }
+};
+
+$("#btn-token").onclick = async () => {
+  try {
+    const res = await api("/enroll-tokens", { method: "POST" });
+    const area = $("#token-area");
+    area.hidden = false;
+    area.innerHTML = `
+      <div class="card banner">
+        <div class="name">Neuen Host verbinden</div>
+        <div class="meta" style="margin:6px 0">
+          Token gilt 15 Minuten und wird nur einmal angezeigt. Auf dem Host ausführen:
+        </div>
+        <code class="token">havenry-agent --server ${esc(location.origin.replace(/^http/, "ws"))}/agent --token ${esc(res.token)}</code>
+        <div class="meta" style="margin-top:8px">
+          Danach erscheint der Host oben und muss bestätigt werden, bevor er Kommandos ausführt.
+        </div>
+      </div>`;
+  } catch (e) { alert(e.message); }
+};
+
+async function refresh() {
+  if (!me) return;
+  try {
+    const [hosts, stacks, events, drift, health] = await Promise.all([
+      api("/hosts"), api("/stacks"), api("/events?limit=40"), api("/drift"),
+      fetch("/healthz").then((r) => r.json()),
+    ]);
+    renderHosts(hosts.hosts || []);
+    renderStacks(stacks.stacks || []);
+    renderEvents(events.events || []);
+    renderDrift(drift.drift || [], drift.hinweis);
+    $("#version").textContent = health.version || "";
+    $("#lastupdate").textContent = "aktualisiert " + new Date().toLocaleTimeString("de-DE");
+  } catch (e) {
+    $("#lastupdate").textContent = "nicht erreichbar";
+  }
+}
+
+(async () => {
+  try { me = await api("/auth/me"); await showApp(); }
+  catch (e) { showLogin(); }
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,30 @@
+# Binaries
+/bin/
+/dist/
+*.exe
+
+# Go
+*.test
+*.out
+/vendor/
+
+# Datenbank & lokaler Zustand
+*.db
+*.db-shm
+*.db-wal
+/data/
+
+# Web-Build
+/web/node_modules/
+/web/dist/
+
+# Umgebung & Secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Editor
+.DS_Store
+.idea/
+.vscode/

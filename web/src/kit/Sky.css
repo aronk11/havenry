@@ -1,0 +1,32 @@
+.sky {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    178deg,
+    var(--sky-high) 0%,
+    var(--sky-mid) 46%,
+    var(--sky-low) 82%,
+    var(--horizon) 100%
+  );
+}
+
+.sky__ambient {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sky__puff {
+  position: absolute;
+  left: 0;
+  animation-name: sky-drift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes sky-drift {
+  from { transform: translateX(-32vw); }
+  to   { transform: translateX(112vw); }
+}
+
+.sky__content { position: relative; z-index: 1; }

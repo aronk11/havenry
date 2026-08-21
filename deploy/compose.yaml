@@ -1,0 +1,31 @@
+# Control Plane.
+#
+# Bewusst OHNE Agent: Der Agent braucht ein Enrollment-Token, und das gibt es
+# erst, wenn die Control Plane läuft. Beides in einer Datei führt dazu, dass
+# schon der erste Befehl nach einem Token verlangt — Compose löst alle
+# Variablen beim Einlesen auf, nicht erst beim Starten eines Dienstes.
+#
+#   docker compose -f deploy/compose.yaml up -d
+#   docker logs havenry | grep Passwort
+#
+# Danach Agenten anschließen, auf diesem Host wie auf jedem anderen:
+#   deploy/agent.yaml
+
+services:
+  havenry:
+    image: ghcr.io/aronk11/havenry:latest
+    container_name: havenry
+    restart: unless-stopped
+    ports:
+      - "8443:8443"
+    volumes:
+      - havenry-data:/var/lib/havenry
+      # Optional: Deploy-Key für ein privates Repo (ADR-0021).
+      # - ./deploy_key:/var/lib/havenry/deploy_key:ro
+    environment:
+      - TZ=Europe/Berlin
+    # Das Startpasswort steht genau einmal im Protokoll:
+    #   docker logs havenry | grep Passwort
+
+volumes:
+  havenry-data:

@@ -1,0 +1,16 @@
+.tag {
+  display: inline-block;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 2px 11px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.tag--neutral { background: var(--cloud); }
+.tag--good    { background: var(--moss); }
+.tag--warn    { background: var(--coral); }
+.tag--sun     { background: var(--marigold); }

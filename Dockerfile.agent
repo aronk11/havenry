@@ -1,0 +1,30 @@
+# Agent.
+#
+# CGO-frei und damit statisch — der Agent läuft auf vielen kleinen Hosts,
+# wo einfaches Cross-Compiling nach arm64 zählt (ADR-0020).
+FROM golang:1.24-alpine AS build
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+ARG VERSION=dev
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOARCH=${TARGETARCH:-amd64} go build -trimpath \
+      -ldflags "-s -w -X main.version=${VERSION}" \
+      -o /out/havenry-agent ./cmd/agent
+
+FROM alpine:3.20
+# docker-cli-compose wird für revert und den Modus apply gebraucht (ADR-0027).
+# Ohne das Paket läuft der Agent weiterhin, meldet aber die Fähigkeit apply nicht.
+RUN apk add --no-cache ca-certificates docker-cli docker-cli-compose tzdata
+
+COPY --from=build /out/havenry-agent /usr/local/bin/havenry-agent
+
+VOLUME /var/lib/havenry-agent
+
+# Läuft bewusst als root: Der Zugriff auf den Docker-Socket ist faktisch
+# Root-Zugriff auf den Host — eine andere Nutzer-ID würde das nur verschleiern,
+# nicht entschärfen. Siehe README.
+ENTRYPOINT ["/usr/local/bin/havenry-agent"]

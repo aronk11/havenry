@@ -1,0 +1,35 @@
+.setup__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 40px;
+}
+
+/* Ohne das sprengt der min-content der Codezeilen die Spalte und der Text
+   verschwindet unter der Nachbarspalte. Gilt für jedes Grid, in dem
+   nicht umbrechender Inhalt steckt. */
+.setup__grid > * { min-width: 0; }
+
+.setup__aside {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+}
+
+.setup__asideTitle { font-size: 21px; margin-bottom: 9px; }
+.setup__asideText { margin: 0; font-size: 15.5px; }
+
+.setup__roles { margin: 0; display: grid; gap: 9px; }
+
+.setup__role {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.setup__role dt { min-width: 78px; font-weight: 500; }
+.setup__role dd { margin: 0; color: var(--ink-soft); font-size: 14.5px; }
+
+.setup__note {
+  margin: 13px 0 0;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+}

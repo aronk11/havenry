@@ -1,0 +1,70 @@
+.hero { padding-top: 26px; padding-bottom: 76px; }
+
+.hero__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: clamp(38px, 7vw, 76px);
+}
+
+.hero__brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  text-decoration: none;
+}
+
+.hero__wordmark { font-size: 27px; color: var(--cloud); }
+
+.hero__nav {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+/* :not(.puff) ist hier nicht kosmetisch: Ohne die Ausnahme gewinnt diese
+   Regel (Klasse + Element) gegen .puff--cloud (nur Klasse) und färbt die
+   Schrift des Knopfes cremeweiß auf cremeweißem Grund — unsichtbar. */
+.hero__nav a:not(.puff) {
+  color: var(--cloud);
+  text-decoration: none;
+  font-weight: 500;
+  opacity: 0.9;
+}
+.hero__nav a:not(.puff):hover { opacity: 1; }
+
+.hero__pitch { text-align: center; margin-bottom: 46px; }
+
+.hero__headline {
+  font-size: clamp(44px, 8.4vw, 92px);
+  color: var(--cloud);
+  margin: 18px 0;
+  /* The hard shadow again — the headline belongs to the same sticker world as
+     the clouds behind it. */
+  text-shadow: 4px 5px 0 rgba(23, 32, 61, 0.5);
+}
+
+/* Der feste Umbruch teilt die Zeile dort, wo sie gemeint ist. Auf schmalen
+   Schirmen bricht der Satz ohnehin um; der zusätzliche Umbruch ließe dann ein
+   einzelnes "keep" auf eigener Zeile stehen. */
+@media (max-width: 620px) {
+  .hero__break { display: none; }
+  .hero__headline { font-size: clamp(36px, 10vw, 52px); }
+}
+
+.hero__sub {
+  font-size: clamp(17px, 2.3vw, 21px);
+  color: var(--cloud);
+  opacity: 0.93;
+  max-width: 620px;
+  margin: 0 auto 30px;
+}
+
+.hero__cta {
+  display: flex;
+  gap: 13px;
+  justify-content: center;
+  flex-wrap: wrap;
+}

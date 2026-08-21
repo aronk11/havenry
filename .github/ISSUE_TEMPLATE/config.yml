@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Frage oder Idee
+    url: https://github.com/aronk11/havenry/discussions
+    about: Für alles, was noch kein Fehler und kein fertiger Vorschlag ist.

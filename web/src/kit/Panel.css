@@ -1,0 +1,9 @@
+.panel {
+  border: var(--outline) solid var(--ink);
+  border-radius: var(--radius);
+  padding: 26px;
+  box-shadow: var(--hard);
+}
+
+.panel h3 { margin-bottom: 9px; }
+.panel p:last-child { margin-bottom: 0; }

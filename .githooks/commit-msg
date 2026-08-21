@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+#
+# Erzwingt Conventional Commits.
+#
+# Bewusst in Bash und ohne Node: Ein Go-Projekt soll nicht wegen einer
+# Commit-Prüfung ein npm-Ökosystem mitschleppen.
+#
+# Installation: ./scripts/install-hooks.sh
+set -euo pipefail
+
+msg_file="$1"
+# Kommentarzeilen und den diff-Anhang von 'git commit -v' entfernen.
+subject="$(grep -v '^#' "$msg_file" | sed '/^diff --git/,$d' | sed '/./,$!d' | head -1)"
+
+# Merge- und Revert-Commits erzeugt Git selbst.
+case "$subject" in
+  "Merge "*|"Revert "*) exit 0 ;;
+esac
+
+types="feat|fix|docs|style|refactor|perf|test|build|ci|chore"
+
+# <typ>(<bereich>)!: <beschreibung>
+#   Bereich optional, ! optional (brechende Änderung)
+pattern="^(${types})(\([a-z0-9._/-]+\))?!?: .+"
+
+fail() {
+  cat >&2 <<EOF
+
+  Commit abgelehnt: $1
+
+  Erwartet:  <typ>(<bereich>): <beschreibung>
+  Gelesen:   ${subject:-<leer>}
+
+  Typen:
+    feat      neue Funktion
+    fix       Fehlerbehebung
+    docs      nur Dokumentation
+    refactor  Umbau ohne Verhaltensänderung
+    perf      Laufzeitverbesserung
+    test      nur Tests
+    build     Bauprozess, Abhängigkeiten
+    ci        Pipeline
+    chore     Sonstiges ohne Produktionswirkung
+    style     Formatierung ohne Bedeutungsänderung
+
+  Beispiele:
+    feat(teams): host-beschränkung je team
+    fix(transport): log-stream endete nicht bei verbindungsverlust
+    refactor(store)!: memory-implementierung entfernt
+
+  Ein "!" oder ein "BREAKING CHANGE:"-Absatz markiert brechende Änderungen.
+  Die Release-Automatik liest genau das (ADR-0016).
+
+EOF
+  exit 1
+}
+
+[ -n "$subject" ] || fail "leere Betreffzeile"
+
+if ! printf '%s' "$subject" | grep -qE "$pattern"; then
+  fail "entspricht nicht dem Conventional-Commits-Format"
+fi
+
+# Betreff kurz halten: Was länger ist, wird in Übersichten abgeschnitten.
+if [ ${#subject} -gt 72 ]; then
+  fail "Betreff ist ${#subject} Zeichen lang, erlaubt sind 72"
+fi
+
+# Kein Punkt am Ende — der Betreff ist eine Überschrift, kein Satz.
+case "$subject" in
+  *.) fail "Betreff endet mit einem Punkt" ;;
+esac
+
+# Beschreibung klein anfangen, damit die Historie einheitlich aussieht.
+desc="${subject#*: }"
+first="$(printf '%s' "$desc" | cut -c1)"
+if [ "$first" != "$(printf '%s' "$first" | tr '[:upper:]' '[:lower:]')" ]; then
+  fail "Beschreibung beginnt groß — durchgehend klein schreiben"
+fi
+
+exit 0

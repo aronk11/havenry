@@ -1,0 +1,31 @@
+# Bewusst schlank: Linter, die häufig falsch anschlagen, sind aus. Ein Linter,
+# den man ständig unterdrückt, erzieht dazu, Warnungen zu ignorieren.
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - bodyclose
+    - errorlint
+    - gosec
+
+linters-settings:
+  misspell:
+    locale: US
+  gosec:
+    excludes:
+      # G104 überschneidet sich mit errcheck.
+      - G104
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec

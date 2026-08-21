@@ -1,0 +1,48 @@
+name: Commits
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  conventional:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Ganze Historie, damit die Commits eines PR vergleichbar sind.
+          fetch-depth: 0
+
+      - name: Commit-Nachrichten prüfen
+        run: |
+          # Bei einem PR nur die neuen Commits, sonst den letzten.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            range="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          else
+            range="HEAD~1..HEAD"
+          fi
+
+          fail=0
+          while read -r sha; do
+            [ -z "$sha" ] && continue
+            subject="$(git log -1 --format=%s "$sha")"
+
+            case "$subject" in
+              "Merge "*|"Revert "*) continue ;;
+            esac
+
+            if ! printf '%s' "$subject" | grep -qE \
+              '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore)(\([a-z0-9._/-]+\))?!?: .+'; then
+              echo "::error::Kein Conventional Commit: $subject"
+              fail=1
+            elif [ ${#subject} -gt 72 ]; then
+              echo "::error::Betreff zu lang (${#subject} > 72): $subject"
+              fail=1
+            fi
+          done < <(git rev-list "$range" 2>/dev/null || git rev-list -1 HEAD)
+
+          exit $fail

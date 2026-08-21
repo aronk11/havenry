@@ -1,0 +1,8 @@
+.features__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
+  gap: 22px;
+}
+
+.features__title { font-size: 25px; margin: 13px 0 9px; }
+.features__body { margin: 0; color: var(--ink-soft); font-size: 15.5px; }

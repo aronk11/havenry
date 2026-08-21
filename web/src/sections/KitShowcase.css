@@ -1,0 +1,54 @@
+.kit {
+  background: var(--cloud-shade);
+  padding: clamp(52px, 8vw, 84px) 0;
+}
+
+.kit__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 20px;
+}
+
+/* Nur ab genug Breite; darunter würde "span 2" das Raster sprengen. */
+@media (min-width: 760px) {
+  .kit__card--wide { grid-column: span 2; }
+}
+
+.kit__card {
+  background: var(--cloud);
+  border: var(--outline) solid var(--ink);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.kit__stage {
+  min-height: 96px;
+  display: grid;
+  place-items: center;
+  background: var(--cloud-shade);
+  border-radius: 13px;
+  padding: 13px;
+  overflow: hidden;
+}
+
+/* Die Vitrine ist schmal. Ohne Begrenzung schiebt sich eine CodeLine über
+   beide Ränder hinaus und verliert Prompt und Copy-Knopf. */
+.kit__stage > * { max-width: 100%; }
+
+.kit__row { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; }
+
+.kit__panelDemo { padding: 15px; font-size: 14px; }
+
+.kit__railDemo { transform: scale(0.82); transform-origin: center; }
+.kit__railDemo .steprail__title { font-size: 16px; }
+.kit__railDemo .steprail__text { font-size: 13px; margin-bottom: 0; }
+
+/* Sky lässt sich nur als Fläche zeigen — die Kachel gibt ihr eine Höhe. */
+.kit__skyDemo { height: 74px; }
+.kit__stage .sky { width: 100%; border-radius: 10px; }
+
+.kit__name { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+.kit__note { margin: 0; color: var(--ink-soft); font-size: 14px; }

@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Binaries bauen
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          mkdir -p dist
+          # Der Agent laeuft auf vielen kleinen Hosts — arm64 ist Pflicht,
+          # nicht Kuer (ADR-0020).
+          for target in linux/amd64 linux/arm64 linux/arm; do
+            os="${target%/*}"; arch="${target#*/}"
+            CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath \
+              -ldflags "-s -w -X main.version=$VERSION" \
+              -o "dist/havenry-agent-$os-$arch" ./cmd/havenry-agent
+          done
+          # Die Control Plane braucht vorerst CGO und damit den Bau auf der
+          # Zielarchitektur — siehe ADR-0020 und scripts/switch-to-pure-go-sqlite.sh
+          CGO_ENABLED=1 go build -trimpath \
+            -ldflags "-s -w -X main.version=$VERSION" \
+            -o dist/havenry-linux-amd64 ./cmd/havenry
+
+      - name: Changelog aus den Commits
+        id: changelog
+        run: |
+          # Conventional Commits sind die Quelle (ADR-0016). Deshalb prueft
+          # die Pipeline sie bei jedem Push — sonst faellt es erst hier auf.
+          prev="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo '')"
+          range="${prev:+$prev..}HEAD"
+
+          {
+            echo "## Änderungen"
+            echo
+            for pair in "feat:Neu" "fix:Behoben" "perf:Schneller" "refactor:Umbau" "docs:Dokumentation"; do
+              type="${pair%%:*}"; label="${pair##*:}"
+              entries="$(git log "$range" --format='%s' --grep="^$type" || true)"
+              [ -z "$entries" ] && continue
+              echo "### $label"
+              printf '%s\n' "$entries" | sed -E "s/^$type(\([^)]*\))?!?: /- /"
+              echo
+            done
+
+            breaking="$(git log "$range" --format='%s%n%b' | grep -E '^BREAKING CHANGE:|^[a-z]+(\(.+\))?!:' || true)"
+            if [ -n "$breaking" ]; then
+              echo "### Brechende Änderungen"
+              printf '%s\n' "$breaking" | sed 's/^/- /'
+            fi
+          } > CHANGELOG_RELEASE.md
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: CHANGELOG_RELEASE.md
+          files: dist/*
+          draft: true

@@ -13,7 +13,7 @@ ARG VERSION=dev
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOARCH=${TARGETARCH:-amd64} go build -trimpath \
       -ldflags "-s -w -X main.version=${VERSION}" \
-      -o /out/havenry-agent ./cmd/agent
+      -o /out/havenry-agent ./cmd/havenry-agent
 
 FROM alpine:3.20
 # docker-cli-compose wird für revert und den Modus apply gebraucht (ADR-0027).

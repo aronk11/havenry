@@ -24,6 +24,10 @@ services:
       # - ./deploy_key:/var/lib/havenry/deploy_key:ro
     environment:
       - TZ=Europe/Berlin
+      # TLS ist standardmäßig an (selbstsigniertes Zertifikat, ADR-0024).
+      # Im reinen Heimnetz ohne eigene Zertifikate kann es abgeschaltet
+      # werden — dann läuft alles unverschlüsselt über HTTP:
+      # - HAVENRY_TLS=off
     # Das Startpasswort steht genau einmal im Protokoll:
     #   docker logs havenry | grep Passwort
 

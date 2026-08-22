@@ -70,3 +70,68 @@ jobs:
           body_path: CHANGELOG_RELEASE.md
           files: dist/*
           draft: true
+
+  # Container-Images für amd64 und arm64 — von ADR-0016 verlangt, arm64 ist in
+  # dieser Zielgruppe Pflicht, nicht Kür (viele kleine Homelab-Hosts).
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Metadaten für havenry (Control Plane)
+        id: meta-havenry
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/havenry
+          tags: |
+            type=semver,pattern={{version}},value=${{ github.ref_name }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.ref_name }}
+            type=raw,value=latest
+
+      - name: havenry bauen und veröffentlichen
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          # linux/arm/v7 fehlt hier bewusst: CGO_ENABLED=1 (ADR-0020) macht
+          # den Cross-Compile für diese Architektur teuer und fehleranfällig,
+          # der Agent unten deckt arm/v7 ab. Fällt mit dem Treiberwechsel weg.
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: VERSION=${{ github.ref_name }}
+          tags: ${{ steps.meta-havenry.outputs.tags }}
+          labels: ${{ steps.meta-havenry.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Metadaten für havenry-agent
+        id: meta-agent
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/havenry-agent
+          tags: |
+            type=semver,pattern={{version}},value=${{ github.ref_name }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.ref_name }}
+            type=raw,value=latest
+
+      - name: havenry-agent bauen und veröffentlichen
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.agent
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          build-args: VERSION=${{ github.ref_name }}
+          tags: ${{ steps.meta-agent.outputs.tags }}
+          labels: ${{ steps.meta-agent.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

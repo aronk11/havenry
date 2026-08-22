@@ -16,7 +16,7 @@
 | Auth | Drei Rollen, Host-Beschränkung, API-Token, Argon2id, Ratenlimit |
 | TLS | An per Vorgabe, selbstsigniertes Zertifikat mit Fingerprint |
 | Oberfläche | Anmeldung, Hosts, Stacks, Abweichungen, Nutzer, Repository, Konto |
-| Auslieferung | Dockerfiles für beide Binaries, Compose-Beispiele, CI |
+| Auslieferung | Dockerfiles für beide Binaries, Compose-Beispiele, CI; Release-Tag baut und veröffentlicht Binaries und ghcr.io-Images (amd64/arm64, Agent zusätzlich arm/v7) |
 
 ## Zahlen
 

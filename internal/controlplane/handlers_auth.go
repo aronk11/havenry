@@ -36,6 +36,20 @@ func toUserView(u store.User) userView {
 
 func decodeBody(r *http.Request, v any) error {
 	defer r.Body.Close()
+
+	// Ohne diese Prüfung ließe sich mit SameSite=None (ADR-0032, für eine
+	// getrennt ausgelieferte Console) die klassische JSON-CSRF über ein
+	// <form enctype="text/plain"> fahren: Ein Browser darf bei einem
+	// "einfachen" Formular-Request Content-Type nur auf
+	// application/x-www-form-urlencoded, multipart/form-data oder
+	// text/plain setzen — nie auf application/json. Wer also exakt
+	// application/json verlangt, schließt den Vektor unabhängig von
+	// SameSite. Ohne Cross-Origin-Console wäre SameSite=Lax allein bereits
+	// ausreichend gewesen; mit ihr ist das hier keine Kür mehr.
+	if ct := r.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		return fmt.Errorf("anfrage unlesbar: Content-Type muss application/json sein, war %q", ct)
+	}
+
 	dec := json.NewDecoder(http.MaxBytesReader(nil, r.Body, 1<<20))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
@@ -91,7 +105,7 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie(sessionCookie); err == nil {
 		_ = s.store.DeleteSession(r.Context(), auth.HashSecret(c.Value))
 	}
-	clearSessionCookie(w)
+	clearSessionCookie(w, r.TLS != nil)
 	writeJSON(w, http.StatusOK, map[string]string{"status": "abgemeldet"})
 }
 

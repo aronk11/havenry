@@ -286,6 +286,28 @@ func newID() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
+// sessionSameSite wählt die SameSite-Regel für die Sitzungs-Cookies.
+//
+// Lax reicht, solange die Oberfläche aus demselben Binary kommt. Eine
+// getrennt ausgelieferte Console (ADR-0032) läuft unter einer anderen
+// Herkunft, und Lax-Cookies gehen bei einem Cross-Origin-fetch() gar nicht
+// erst mit — Browser schicken sie nur bei einer Top-Level-Navigation, nicht
+// bei einer per JavaScript ausgelösten Anfrage. Ohne None wäre die Console
+// technisch nie in der Lage, sich anzumelden, egal wie CORS steht.
+//
+// None ohne Secure verwirft jeder aktuelle Browser ohnehin, deshalb der
+// Rückfall auf Lax im TLS-losen Testbetrieb (HAVENRY_TLS=off) — dort bleibt
+// nur der Zugriff über dieselbe Herkunft möglich, was für lokale Tests reicht.
+// Der eigentliche Schutz gegen CSRF hängt an dieser Stelle nicht mehr an
+// SameSite, sondern an der Content-Type-Prüfung in decodeBody: Ohne sie wäre
+// SameSite=None die klassische Lücke für JSON-CSRF per <form>.
+func sessionSameSite(secure bool) http.SameSite {
+	if secure {
+		return http.SameSiteNoneMode
+	}
+	return http.SameSiteLaxMode
+}
+
 func setSessionCookie(w http.ResponseWriter, token string, secure bool) {
 	http.SetCookie(w, &http.Cookie{
 		Name:  sessionCookie,
@@ -294,19 +316,15 @@ func setSessionCookie(w http.ResponseWriter, token string, secure bool) {
 		// HttpOnly: kein Zugriff aus JavaScript, damit ein XSS-Fehler nicht
 		// sofort die Sitzung ausleitet.
 		HttpOnly: true,
-		// Lax statt Strict: Strict würde bedeuten, dass ein Klick auf einen
-		// Link zur Oberfläche auf dem Anmeldebildschirm landet. Lax schützt
-		// weiterhin gegen die relevanten Fälle, da alle verändernden Aufrufe
-		// POST sind.
-		SameSite: http.SameSiteLaxMode,
+		SameSite: sessionSameSite(secure),
 		Secure:   secure,
 		MaxAge:   int(SessionTTL.Seconds()),
 	})
 }
 
-func clearSessionCookie(w http.ResponseWriter) {
+func clearSessionCookie(w http.ResponseWriter, secure bool) {
 	http.SetCookie(w, &http.Cookie{
 		Name: sessionCookie, Value: "", Path: "/",
-		HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: -1,
+		HttpOnly: true, SameSite: sessionSameSite(secure), Secure: secure, MaxAge: -1,
 	})
 }

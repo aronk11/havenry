@@ -10,6 +10,7 @@
 | Docker | Eigener Engine-API-Client, Container lesen und steuern, Log-Streaming |
 | Metriken | CPU, Speicher, Platte, Uptime, Load — direkt aus /proc |
 | Git | Klonen, Fetch, Reset, Clean; Stack-Erkennung nach Konvention |
+| Lokale Stacks | Compose-Definitionen direkt in Havenry anlegen/bearbeiten, ohne Git (ADR-0034) |
 | Drift | Semantischer Vergleich, vier Kategorien, keine Falsch-positiven |
 | Auflösung | `revert` über Compose-CLI, `adopt` für Image-Angaben, Modus `apply` |
 | Auth | Drei Rollen, Host-Beschränkung, API-Token, Argon2id, Ratenlimit |

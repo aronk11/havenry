@@ -47,6 +47,10 @@ const (
 	PermManageUsers   Permission = "users.manage"
 	PermManageRepo    Permission = "repo.manage"
 	PermAdoptRevert   Permission = "drift.resolve"
+	// PermManageStacks steuert lokal in Havenry gepflegte Stack-Definitionen
+	// (ADR-0034) — bewusst auf derselben Stufe wie PermManageRepo, weil beide
+	// den Soll-Zustand festlegen statt nur bestehende Container zu steuern.
+	PermManageStacks Permission = "stacks.manage"
 )
 
 // rolePermissions bildet Rollen auf Fähigkeiten ab.
@@ -57,7 +61,7 @@ var rolePermissions = map[Role]map[Permission]bool{
 	RoleAdmin: {
 		PermViewHosts: true, PermApproveHost: true, PermControlDocker: true,
 		PermViewLogs: true, PermManageUsers: true, PermManageRepo: true,
-		PermAdoptRevert: true,
+		PermAdoptRevert: true, PermManageStacks: true,
 	},
 	RoleOperator: {
 		PermViewHosts: true, PermControlDocker: true, PermViewLogs: true,

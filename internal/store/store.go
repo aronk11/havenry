@@ -150,12 +150,41 @@ type RepoStore interface {
 	ClearRepo(ctx context.Context) error
 }
 
+// LocalStack ist ein Compose-Stack, den Havenry selbst verwaltet statt Git
+// (ADR-0034).
+//
+// Bewusste Ausnahme von der package-Doc oben: Für lokale Stacks ist die
+// Datenbank nicht abgeleiteter Zustand, sondern die einzige Kopie. Wer keinen
+// Git-Workflow will, bekommt hier die Bequemlichkeit — und trägt dafür die
+// Verantwortung fürs Backup, die sonst Git übernimmt.
+type LocalStack struct {
+	ID          string
+	HostID      string
+	Name        string
+	ComposeYAML string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	// UpdatedBy ist der Benutzername des letzten Bearbeiters (ADR-0018).
+	UpdatedBy string
+}
+
+// LocalStackStore ergänzt Store um in Havenry selbst gepflegte Stacks.
+type LocalStackStore interface {
+	CreateLocalStack(ctx context.Context, st LocalStack) error
+	UpdateLocalStack(ctx context.Context, st LocalStack) error
+	DeleteLocalStack(ctx context.Context, hostID, name string) error
+	LocalStackByName(ctx context.Context, hostID, name string) (LocalStack, error)
+	LocalStacksForHost(ctx context.Context, hostID string) ([]LocalStack, error)
+	LocalStacks(ctx context.Context) ([]LocalStack, error)
+}
+
 // Full ist die vollständige Persistenzschnittstelle.
 type Full interface {
 	Store
 	UserStore
 	RepoStore
 	TeamStore
+	LocalStackStore
 }
 
 // Team bündelt eine Rolle und eine Host-Menge (ADR-0029).

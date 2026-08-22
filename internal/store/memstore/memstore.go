@@ -40,6 +40,8 @@ type Mem struct {
 	events  []store.Event
 	eventID int64
 	repo    *store.GitRepo
+	// localStacks ist nach hostID#name geschlüsselt (siehe localStackKey).
+	localStacks map[string]store.LocalStack
 }
 
 func New() *Mem {
@@ -47,9 +49,12 @@ func New() *Mem {
 		tokens: map[string]store.EnrollToken{}, hosts: map[string]store.Host{},
 		users: map[string]store.User{}, sess: map[string]store.Session{},
 		apitok: map[string]store.APIToken{}, teams: map[string]store.Team{},
-		members: map[string]map[string]time.Time{},
+		members:     map[string]map[string]time.Time{},
+		localStacks: map[string]store.LocalStack{},
 	}
 }
+
+func localStackKey(hostID, name string) string { return hostID + "#" + name }
 
 func (m *Mem) CreateEnrollToken(_ context.Context, t store.EnrollToken) error {
 	m.mu.Lock()
@@ -497,6 +502,84 @@ func (m *Mem) TeamsForUser(_ context.Context, userID string) ([]store.Team, erro
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out, nil
+}
+
+func (m *Mem) CreateLocalStack(_ context.Context, st store.LocalStack) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	// Spiegelt die FOREIGN KEY-Constraint der SQLite-Implementierung — sonst
+	// verhalten sich die beiden Backends bei einer unbekannten Host-ID
+	// unterschiedlich (ADR-0031 verlangt Austauschbarkeit ohne Überraschungen).
+	if _, ok := m.hosts[st.HostID]; !ok {
+		return store.ErrNotFound
+	}
+	key := localStackKey(st.HostID, st.Name)
+	if _, ok := m.localStacks[key]; ok {
+		return store.ErrLocalStackExists
+	}
+	m.localStacks[key] = st
+	return nil
+}
+
+func (m *Mem) UpdateLocalStack(_ context.Context, st store.LocalStack) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	key := localStackKey(st.HostID, st.Name)
+	if _, ok := m.localStacks[key]; !ok {
+		return store.ErrNotFound
+	}
+	m.localStacks[key] = st
+	return nil
+}
+
+func (m *Mem) DeleteLocalStack(_ context.Context, hostID, name string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	key := localStackKey(hostID, name)
+	if _, ok := m.localStacks[key]; !ok {
+		return store.ErrNotFound
+	}
+	delete(m.localStacks, key)
+	return nil
+}
+
+func (m *Mem) LocalStackByName(_ context.Context, hostID, name string) (store.LocalStack, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	st, ok := m.localStacks[localStackKey(hostID, name)]
+	if !ok {
+		return store.LocalStack{}, store.ErrNotFound
+	}
+	return st, nil
+}
+
+func (m *Mem) LocalStacksForHost(_ context.Context, hostID string) ([]store.LocalStack, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := []store.LocalStack{}
+	for _, st := range m.localStacks {
+		if st.HostID == hostID {
+			out = append(out, st)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out, nil
+}
+
+func (m *Mem) LocalStacks(_ context.Context) ([]store.LocalStack, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := []store.LocalStack{}
+	for _, st := range m.localStacks {
+		out = append(out, st)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].HostID != out[j].HostID {
+			return out[i].HostID < out[j].HostID
+		}
+		return out[i].Name < out[j].Name
+	})
 	return out, nil
 }
 

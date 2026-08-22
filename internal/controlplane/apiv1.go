@@ -84,6 +84,20 @@ func registerV1(mux *http.ServeMux, s *Server) {
 	mux.HandleFunc("POST "+p+"/drift/{hostID}/{stack}/{action}",
 		s.requireAuth(auth.PermAdoptRevert, s.resolveDrift))
 
+	// --- Lokale Stacks (ADR-0034): Compose-Definitionen ohne Git ---
+	mux.HandleFunc("GET "+p+"/hosts/{hostID}/local-stacks",
+		s.requireAuth(auth.PermViewHosts, s.listLocalStacks))
+	mux.HandleFunc("POST "+p+"/hosts/{hostID}/local-stacks",
+		s.requireAuth(auth.PermManageStacks, s.createLocalStack))
+	mux.HandleFunc("GET "+p+"/hosts/{hostID}/local-stacks/{name}",
+		s.requireAuth(auth.PermViewHosts, s.getLocalStack))
+	mux.HandleFunc("PUT "+p+"/hosts/{hostID}/local-stacks/{name}",
+		s.requireAuth(auth.PermManageStacks, s.updateLocalStack))
+	mux.HandleFunc("DELETE "+p+"/hosts/{hostID}/local-stacks/{name}",
+		s.requireAuth(auth.PermManageStacks, s.deleteLocalStack))
+	mux.HandleFunc("POST "+p+"/hosts/{hostID}/local-stacks/{name}/apply",
+		s.requireAuth(auth.PermAdoptRevert, s.applyLocalStack))
+
 	// --- Repository ---
 	mux.HandleFunc("GET "+p+"/repo", s.requireAuth(auth.PermViewHosts, s.getRepo))
 	mux.HandleFunc("PUT "+p+"/repo", s.requireAuth(auth.PermManageRepo, s.setRepo))

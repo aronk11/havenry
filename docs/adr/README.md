@@ -40,3 +40,4 @@ Format: MADR-angelehnt, bewusst kurz.
 | [0031](0031-austauschbare-datenbank.md) | Austauschbare Datenbank | Akzeptiert |
 | [0032](0032-repo-aufteilung.md) | Aufteilung in Repositories und Lizenzschichten | Akzeptiert |
 | [0033](0033-updates-und-breaking-changes.md) | Updates auf Klick, samt der schlechten Nachrichten | Akzeptiert |
+| [0034](0034-lokale-stacks-und-git-schreibzugriff.md) | Lokale Stacks, Git-Schreibzugriff und direktes Container-Management | Akzeptiert |

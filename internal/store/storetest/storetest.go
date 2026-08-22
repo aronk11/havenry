@@ -60,6 +60,10 @@ func Run(t *testing.T, open Factory) {
 		{"EmptyHostListStaysEmpty", testEmptyHostListStaysEmpty},
 
 		{"RepoIsSingleton", testRepoIsSingleton},
+
+		{"LocalStackNameUniquePerHost", testLocalStackNameUniquePerHost},
+		{"LocalStackCRUD", testLocalStackCRUD},
+		{"LocalStacksScopedToHost", testLocalStacksScopedToHost},
 	}
 
 	for _, tc := range tests {
@@ -517,6 +521,116 @@ func testRepoIsSingleton(t *testing.T, s store.Full) {
 	must(t, s.ClearRepo(ctx))
 	if _, err := s.Repo(ctx); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("nach ClearRepo = %v, erwartet ErrNotFound", err)
+	}
+}
+
+// --- Lokale Stacks (ADR-0034) ---------------------------------------------
+
+func testHost(id string, now time.Time) store.Host {
+	return store.Host{
+		ID: id, Hostname: id, CredentialHash: "cred-" + id,
+		OS: "linux", Arch: "amd64", EnrolledAt: now, LastSeen: now,
+	}
+}
+
+func testLocalStackNameUniquePerHost(t *testing.T, s store.Full) {
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	must(t, s.UpsertHost(ctx, testHost("host-a", now)))
+
+	base := store.LocalStack{
+		ID: "ls-1", HostID: "host-a", Name: "monitoring",
+		ComposeYAML: "services: {}", CreatedAt: now, UpdatedAt: now, UpdatedBy: "admin",
+	}
+	must(t, s.CreateLocalStack(ctx, base))
+
+	dup := base
+	dup.ID = "ls-2"
+	if err := s.CreateLocalStack(ctx, dup); !errors.Is(err, store.ErrLocalStackExists) {
+		t.Fatalf("doppelter Stack-Name auf demselben Host = %v, erwartet ErrLocalStackExists", err)
+	}
+
+	// Derselbe Name auf einem anderen Host ist ausdrücklich erlaubt (ADR-0014
+	// gilt sinngemäß auch für lokale Stacks).
+	must(t, s.UpsertHost(ctx, testHost("host-b", now)))
+	other := base
+	other.ID = "ls-3"
+	other.HostID = "host-b"
+	must(t, s.CreateLocalStack(ctx, other))
+}
+
+func testLocalStackCRUD(t *testing.T, s store.Full) {
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	must(t, s.UpsertHost(ctx, testHost("host-c", now)))
+
+	if _, err := s.LocalStackByName(ctx, "host-c", "fehlt"); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("unbekannter Stack = %v, erwartet ErrNotFound", err)
+	}
+
+	st := store.LocalStack{
+		ID: "ls-c1", HostID: "host-c", Name: "app",
+		ComposeYAML: "services:\n  web:\n    image: nginx\n",
+		CreatedAt:   now, UpdatedAt: now, UpdatedBy: "admin",
+	}
+	must(t, s.CreateLocalStack(ctx, st))
+
+	got, err := s.LocalStackByName(ctx, "host-c", "app")
+	must(t, err)
+	if got.ComposeYAML != st.ComposeYAML {
+		t.Fatalf("ComposeYAML = %q, erwartet %q", got.ComposeYAML, st.ComposeYAML)
+	}
+
+	st.ComposeYAML = "services:\n  web:\n    image: nginx:1.27\n"
+	st.UpdatedAt = now.Add(time.Minute)
+	st.UpdatedBy = "operator"
+	must(t, s.UpdateLocalStack(ctx, st))
+
+	got, err = s.LocalStackByName(ctx, "host-c", "app")
+	must(t, err)
+	if got.ComposeYAML != st.ComposeYAML || got.UpdatedBy != "operator" {
+		t.Fatalf("Update nicht übernommen: %+v", got)
+	}
+
+	if err := s.UpdateLocalStack(ctx, store.LocalStack{HostID: "host-c", Name: "existiert-nicht"}); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("Update eines fehlenden Stacks = %v, erwartet ErrNotFound", err)
+	}
+
+	must(t, s.DeleteLocalStack(ctx, "host-c", "app"))
+	if _, err := s.LocalStackByName(ctx, "host-c", "app"); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("nach Delete = %v, erwartet ErrNotFound", err)
+	}
+	if err := s.DeleteLocalStack(ctx, "host-c", "app"); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("doppeltes Delete = %v, erwartet ErrNotFound", err)
+	}
+}
+
+func testLocalStacksScopedToHost(t *testing.T, s store.Full) {
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	must(t, s.UpsertHost(ctx, testHost("host-d", now)))
+	must(t, s.UpsertHost(ctx, testHost("host-e", now)))
+
+	must(t, s.CreateLocalStack(ctx, store.LocalStack{
+		ID: "ls-d1", HostID: "host-d", Name: "a", ComposeYAML: "x", CreatedAt: now, UpdatedAt: now,
+	}))
+	must(t, s.CreateLocalStack(ctx, store.LocalStack{
+		ID: "ls-d2", HostID: "host-d", Name: "b", ComposeYAML: "x", CreatedAt: now, UpdatedAt: now,
+	}))
+	must(t, s.CreateLocalStack(ctx, store.LocalStack{
+		ID: "ls-e1", HostID: "host-e", Name: "a", ComposeYAML: "x", CreatedAt: now, UpdatedAt: now,
+	}))
+
+	onD, err := s.LocalStacksForHost(ctx, "host-d")
+	must(t, err)
+	if len(onD) != 2 {
+		t.Fatalf("LocalStacksForHost(host-d) = %d, erwartet 2", len(onD))
+	}
+
+	all, err := s.LocalStacks(ctx)
+	must(t, err)
+	if len(all) != 3 {
+		t.Fatalf("LocalStacks() = %d, erwartet 3", len(all))
 	}
 }
 

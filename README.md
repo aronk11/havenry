@@ -19,7 +19,10 @@ Watchtower updatet, aber kennt keinen Weg zurück.
 Diese Plattform macht drei Dinge anders:
 
 - **Deine Compose-Files bleiben deine.** Kein eigenes Format, kein Lock-in. Deinstallier
-  das Tool und dein Setup läuft weiter. (ADR-0002)
+  das Tool und dein Setup läuft weiter — solange die Stacks aus Git kommen. Das ist der
+  empfohlene Weg (ADR-0002); wer keinen Git-Workflow will, kann Stacks stattdessen direkt
+  in Havenry pflegen (ADR-0034) — dann ist Havenrys Datenbank die einzige Kopie, und die
+  Oberfläche sagt das auch so.
 - **Drift wird gezeigt, nicht überschrieben.** Default ist `observe`: du siehst, was sich
   geändert hat, und entscheidest — ins Repo übernehmen oder zurücksetzen. Automatik ist
   opt-in pro Stack. (ADR-0004)

@@ -103,10 +103,11 @@ var coreMigrations = []string{
 // Reihenfolge und Inhalt bestehender Einträge bleiben unverändert — nur so
 // bleiben bestehende Datenbanken aktualisierbar. Neues wird angehängt.
 func allMigrations() []string {
-	out := make([]string, 0, len(coreMigrations)+len(userMigrations)+len(teamMigrations))
+	out := make([]string, 0, len(coreMigrations)+len(userMigrations)+len(teamMigrations)+len(localStackMigrations))
 	out = append(out, coreMigrations...)
 	out = append(out, userMigrations...)
 	out = append(out, teamMigrations...)
+	out = append(out, localStackMigrations...)
 	return out
 }
 

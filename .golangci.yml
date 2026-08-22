@@ -10,14 +10,16 @@ linters:
     - ineffassign
     - staticcheck
     - unused
-    - misspell
     - bodyclose
     - errorlint
     - gosec
+  # misspell fehlt bewusst: Es prüft gegen ein englisches Wörterbuch und
+  # markiert in dieser deutsch kommentierten Codebase reihenweise echte Wörter
+  # als Tippfehler ("Synchronisation", "Autor", "Konfiguration" — es kennt sie
+  # als Falschschreibungen ihrer englischen Pendants). Genau der Fall aus der
+  # Überschrift oben: ein Linter, der ständig falsch anschlägt.
 
 linters-settings:
-  misspell:
-    locale: US
   gosec:
     excludes:
       # G104 überschneidet sich mit errcheck.
@@ -29,3 +31,8 @@ issues:
       linters:
         - errcheck
         - gosec
+        # api_auth_test.go schließt den Response-Body zentral im
+        # apiClient.do()-Helfer, bevor er zurückgegeben wird — bodyclose sieht
+        # den Aufruf an der Rückgabestelle nicht und schlägt an jeder
+        # Verwendungsstelle in dieser Datei falsch an.
+        - bodyclose

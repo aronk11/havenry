@@ -98,9 +98,7 @@ func EnsureTLS(dataDir string, hostnames []string) (TLSPaths, string, error) {
 			tmpl.DNSNames = append(tmpl.DNSNames, h)
 		}
 	}
-	for _, ip := range localAddresses() {
-		tmpl.IPAddresses = append(tmpl.IPAddresses, ip)
-	}
+	tmpl.IPAddresses = append(tmpl.IPAddresses, localAddresses()...)
 
 	der, err := x509.CreateCertificate(rand.Reader, &tmpl, &tmpl, &key.PublicKey, key)
 	if err != nil {
@@ -108,7 +106,7 @@ func EnsureTLS(dataDir string, hostnames []string) (TLSPaths, string, error) {
 	}
 
 	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
-	if err := os.WriteFile(p.Cert, certPEM, 0o644); err != nil {
+	if err := os.WriteFile(p.Cert, certPEM, 0o644); err != nil { //nolint:gosec // G306: Zertifikat ist öffentlich, anders als der Schlüssel unten
 		return p, "", fmt.Errorf("zertifikat schreiben: %w", err)
 	}
 

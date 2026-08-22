@@ -319,7 +319,7 @@ func toInt(v any) (int, bool) {
 	case int64:
 		return int(n), true
 	case uint64:
-		return int(n), true
+		return int(n), true //nolint:gosec // G115: nur Portnummern und Zähler aus Compose, weit unter 2^31
 	case float64:
 		return int(n), true
 	case string:

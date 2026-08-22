@@ -26,9 +26,6 @@ type fakeDaemon struct {
 	// inspectFails lässt InspectContainer scheitern, um den Teilausfall zu prüfen.
 	inspectFails bool
 
-	// calls zählt Aufrufe je Pfad — belegt Idempotenz-Verhalten.
-	calls map[string]int
-
 	srv      *http.Server
 	socket   string
 	listener net.Listener
@@ -59,7 +56,6 @@ func newFakeDaemon(t *testing.T) *fakeDaemon {
 
 	d := &fakeDaemon{
 		containers: make(map[string]*fakeContainer),
-		calls:      make(map[string]int),
 		socket:     sock,
 		listener:   ln,
 	}
@@ -73,12 +69,6 @@ func (d *fakeDaemon) add(c *fakeContainer) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.containers[c.ID] = c
-}
-
-func (d *fakeDaemon) callCount(path string) int {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	return d.calls[path]
 }
 
 func (d *fakeDaemon) state(id string) string {
@@ -96,10 +86,6 @@ func (d *fakeDaemon) handle(w http.ResponseWriter, r *http.Request) {
 	if i := strings.Index(path[1:], "/"); i >= 0 {
 		path = path[i+1:]
 	}
-
-	d.mu.Lock()
-	d.calls[path]++
-	d.mu.Unlock()
 
 	switch {
 	case path == "/version":

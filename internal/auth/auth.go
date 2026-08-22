@@ -194,7 +194,7 @@ func VerifyPassword(password, encoded string) error {
 		return fmt.Errorf("hash unlesbar: %w", err)
 	}
 
-	got := argon2.IDKey([]byte(password), salt, time, memory, threads, uint32(len(want)))
+	got := argon2.IDKey([]byte(password), salt, time, memory, threads, uint32(len(want))) //nolint:gosec // G115: Hash-Länge, praktisch nie nahe 2^32
 
 	// Konstantzeit-Vergleich: Ein Vergleich mit früherem Abbruch verrät über
 	// die Laufzeit, wie viele Bytes übereinstimmen.

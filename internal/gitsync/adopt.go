@@ -144,7 +144,7 @@ func (s *Syncer) EditAndPush(
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(abs, updated, 0o644); err != nil {
+	if err := os.WriteFile(abs, updated, 0o644); err != nil { //nolint:gosec // G306: kein Geheimnis, Datei liegt ohnehin lesbar im Git-Checkout
 		return "", fmt.Errorf("datei schreiben: %w", err)
 	}
 
@@ -189,7 +189,7 @@ func (s *Syncer) commitAndPushLocked(ctx context.Context, relPath, message, auth
 	if _, err := s.run(ctx, "push", "origin", "HEAD:"+s.cfg.Branch); err != nil {
 		// Zurück auf den Stand vor dem Commit.
 		if _, rerr := s.run(ctx, "reset", "--hard", before); rerr != nil {
-			return "", fmt.Errorf("push fehlgeschlagen (%w) und rücksetzen misslang: %v", err, rerr)
+			return "", fmt.Errorf("push fehlgeschlagen (%w) und rücksetzen misslang: %w", err, rerr)
 		}
 		return "", fmt.Errorf("push fehlgeschlagen — hat der deploy-key schreibrechte? %w", err)
 	}

@@ -15,7 +15,7 @@ import (
 // Host dauerhaft aussperren, weil das Enrollment-Token bereits verbraucht ist
 // (ADR-0015).
 
-const credentialFile = "credential.json"
+const credentialFile = "credential.json" //nolint:gosec // G101 falsch-positiv: Dateiname, kein Geheimnis
 
 type credentialState struct {
 	HostID     string `json:"host_id"`

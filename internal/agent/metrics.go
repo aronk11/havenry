@@ -141,7 +141,7 @@ func diskUsage(path string) (used, total uint64, err error) {
 	if err := syscall.Statfs(path, &st); err != nil {
 		return 0, 0, err
 	}
-	bs := uint64(st.Bsize)
+	bs := uint64(st.Bsize) //nolint:gosec // G115: Blockgröße des Dateisystems, immer klein und positiv
 	total = st.Blocks * bs
 	// Bavail statt Bfree: Ein Teil ist für root reserviert und für den
 	// Nutzer nicht verfügbar.

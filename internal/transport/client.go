@@ -89,7 +89,7 @@ func (c *Client) Run(ctx context.Context) error {
 			return ctx.Err()
 		}
 		if c.fatalErr != nil {
-			return fmt.Errorf("%w: %v", ErrFatal, c.fatalErr)
+			return fmt.Errorf("%w: %w", ErrFatal, c.fatalErr)
 		}
 
 		attempt++
@@ -132,7 +132,16 @@ func (c *Client) session(ctx context.Context) error {
 		}
 	}
 
-	conn, _, err := websocket.Dial(ctx, c.cfg.ServerURL, opts)
+	conn, resp, err := websocket.Dial(ctx, c.cfg.ServerURL, opts)
+	if resp != nil && resp.Body != nil {
+		// Der Upgrade-Handshake hinterlässt eine http.Response, die die
+		// websocket-Bibliothek selbst nicht schließt — ohne das hier bleibt
+		// bei jedem (Re-)Connect eine Verbindung im TIME_WAIT hängen.
+		// resp kann bei einem gescheiterten Handshake non-nil sein, ohne
+		// dass Body gesetzt ist — deshalb beide Prüfungen (siehe
+		// TestEnrollmentFlow, das ohne die zweite mit nil pointer abstürzte).
+		defer resp.Body.Close()
+	}
 	if err != nil {
 		return fmt.Errorf("verbindungsaufbau: %w", err)
 	}

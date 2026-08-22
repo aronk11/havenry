@@ -215,7 +215,7 @@ type ErrorPayload struct {
 // Fehlercodes. Fatal bedeutet: der Agent soll nicht blind weiter reconnecten.
 const (
 	ErrProtocolMismatch = "protocol_mismatch"
-	ErrBadCredential    = "bad_credential"
+	ErrBadCredential    = "bad_credential" //nolint:gosec // G101 falsch-positiv: Fehlercode-Bezeichner, kein Geheimnis
 	ErrTokenExpired     = "token_expired"
 	ErrNotApproved      = "not_approved"
 	ErrInternal         = "internal"
